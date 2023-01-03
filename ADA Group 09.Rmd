@@ -1,0 +1,580 @@
+---
+title: "Advanced Data Analysis ET Project"
+author:
+- Group 09
+- BAALAAJI V R      MBAA21018
+- LALKISHEN M       MBAA21032
+- SALONI SINGHAL    MBAA21044
+- UJWWAL PRAKAASH   MBAA21056
+- YASPAL B          MBAA21058
+date: "2023-01-01"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#Clear computer memory of previous R sessions # 
+rm(list=ls()) 
+
+#setting up the working directory
+setwd("D:/advanced DA/Project")
+
+## Introduction
+The IPL is the most-attended cricket league in the world. In this visualization project, we have performed Exploratory Data Analysis on IPL 2008-2019 dataset by exploring through various statistical tools that might interest cricket entusiasts. 
+
+### Problem Statement:
+To form a dream cricket team by analysing IPL ball-by-ball and match by match dataset. Players who have played/ bowled 300 balls are not considered.
+
+
+### Methodology
+
+- Exploratory Data Analysis: Using descriptive statistics to analyze and investigate data sets and summarize their main characteristics, often employing data visualization methods.
+
+- BestWorst Method- Best-Worst Method (BWM) is a multi-criteria decision-making (MCDM) method where a number of alternatives have to be evaluated with respect to a number of criterias. 
+
+### Our proposed ideal Super 11: 
+## "Chennai TITANS"
+It comprises of strong openers, middle-order hitters, all-rounders, a reliable wicketkeeper, and a collection of quick and spin bowlers.
+
+## Dataset 
+
+**Source**: <https://www.kaggle.com/datasets/patrickb1912/ipl-complete-dataset-20082020>
+
+This dataset consists of two seperate CSV files : matches and deliveries. These files contain the information of each match summary and ball by ball details, respectively
+
+```{r}
+dataframe1 <- read.csv("IPL Matches 2008-2020.csv")
+dataframe2 <- read.csv("IPL Ball-by-Ball 2008-2020.csv")
+
+dataframe01 <- read.csv("IPL Matches 2008-2020.csv")
+dataframe02 <- read.csv("IPL Ball-by-Ball 2008-2020.csv")
+
+
+```
+
+```{r include=FALSE}
+#loading libraries
+
+library(ggplot2)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(rmarkdown)
+library(tidyr)
+library(tidyverse)
+library(janitor)
+library(gridExtra)
+library(lubridate)
+library(plotly)
+```
+
+## Assumptions
+- Home ground: Chennai
+- Total matches played 16 matches  
+- Winning points per matches 2 points
+- Minimum points for qualification is 16 points
+- Out of 16 matches, 8 matches are played in home in order to increase the probability of playoffs and finals. The core team will be based on home ground
+- Players have not subjected to  any kinds of injuries  during IPL tenure
+- None of the players given in the data are retired  IPL is conducted in India,  not in any neutral venue
+- None of the players are retired 
+
+## Pitch Conditions
+- The MA Chidambaram Stadium, has been in operation since  1916, making it India’s oldest existing stadium
+
+- Opened: 1916
+- Capacity: 50,000
+- Known as: Chepauk; Madras Cricket Club Ground  
+- Ends – Anna Pavilion End, V Pattabhiraman Gate  
+- Location – Chennai, India
+- Home to – Tamil Nadu, Chennai Super Kings
+
+- Traditionally, the wicket at this venue suits the spinners and  since overseas batsmen generally struggle against spin,  India have dominated their opponents
+The weather is expected to be sunny. The temperature will  stay around 25-30 degrees Celsius, and no rain interruptions  are expected
+- When the  pitches were uncovered and left unattended to, it aided the fast  bowlers in the past, Now the wickets have become spin-friendly
+- What stands out at Chepauk is the atmosphere and crowd, which are  said to be the most knowledgeable and appreciative in the country  smostly presented before an audience.
+
+
+## Descriptive Statistics
+
+##Total Number of Matches 
+```{r Total Number of Matches}
+dataframe1 %>% 
+  select(toss_winner, winner) %>% 
+  summarise(cases = n())
+```
+
+Total matches information in the data 816
+
+
+#Total number of teamns winning tosses and winning matches
+```{r Teams winning tosses and winning matches}
+dataframe1 %>% 
+  filter(toss_winner == winner) %>%
+  summarise(cases = n())
+```
+
+Probability of team winning the toss winning the match 51.2%
+
+#Out of toss winning, how many times team batted first won and how many times team field first won
+```{r}
+dataframe1 %>% group_by(toss_decision) %>%
+  filter(toss_winner == winner) %>%
+  summarise(cases = n())
+```
+
+Out of total team winning the toss:
+- Team batting First has won 145 matches
+- Team bowling first has won 273 matches
+
+
+#summarising the number of matches win
+```{r}
+dataframe1 %>%
+  mutate_all(
+    function(x) 
+      str_replace_all(x, 
+                      c("Chennai Super Kings" = "CSK", 
+                        "Mumbai Indians" = "MI",
+                        "Deccan Chargers" = "DC",
+                        "Delhi Daredevils" = "DD",
+                        "Delhi Capitals" = "DD",
+                        "Kolkata Knight Riders" = "KKR",
+                        "Rajasthan Royals" = "RR",
+                        "Royal Challengers Bangalore" = "RCB",
+                        "Sunrisers Hyderabad" = "SRH",
+                        "Gujarat Lions" = "GL",
+                        "Rising Pune Supergiants" = "RPS",
+                        "Rising Pune Supergiant" = "RPS",
+                        "Pune Warriors" = "PWI",
+                        "Kochi Tuskers Kerala" = "KTK",
+                        "Kings XI Punjab" = "KXIP"))) %>% 
+  mutate(
+    id = id %>% parse_integer(),
+    date = date %>% parse_date_time(orders= c("%d/%m/%y", "%Y-%m-%d")),
+    season = date %>% year(),
+    toss_decision = toss_decision %>% factor(),
+    result_margin = result_margin %>% parse_integer)%>% 
+  
+  arrange(date)-> matches
+
+matches %>% 
+  group_by(winner) %>%
+  summarize(wins = n() , .groups = 'drop')
+```
+
+```{r plt1, echo=FALSE}
+
+matches %>% 
+  group_by(winner) %>%
+  summarize(wins = n() )%>% 
+  top_n(10) %>%
+  ggplot(aes(x = reorder(winner, wins), y=wins, fill=winner)) + geom_col(position="dodge") +
+  labs(x="Winner", y = "Wins" , title = "Total Matches Won") + coord_flip()
+
+```
+
+- Most of the matches was won by Mumbai Indians
+- Least number of matches was won by SRH, excluding teams like Deccan chargers, - Rising Pune super giants since they played for less tenure
+
+```{r plt2, echo=FALSE}
+colnames(matches)
+matches <- mutate(matches, Toss_Match_win = case_when(toss_winner == winner ~ 1,
+                                                      TRUE ~ 0))
+
+matches <- mutate(matches, Toss_Match_win_cat = case_when(Toss_Match_win == 1 ~ "Impact",
+                                                          TRUE ~ "No Impact"))
+#plot for toss win impact on match
+matches %>% 
+  group_by(Toss_Match_win_cat) %>%
+  summarize(wins = n()) %>% ggplot(aes(x=Toss_Match_win_cat, y=wins)) + geom_bar(stat="identity", width=0.5) +
+  geom_text(aes(label=wins), vjust=1.6, color="white", size=3.5)+
+  theme_minimal()
+
+
+
+```
+
+
+#Best worst method
+
+Steps: 
+- Determine a set of decision criteria. 
+- Determine the best (e.g. the most important), and the worst (e.g.
+the least important) criteria
+- Determine the preference of the best criterion over all the other
+criteria using a number between 1 and 9 (or other scales). 
+- Determine the preference of all the criteria over the worst criterion
+using a number between 1 and 9 (or other scales).
+- Find the optimal weights
+-To find the optimal weights, the following optimization model is formulated.
+
+![BWM normalisation](C:/Users/salon/OneDrive/Desktop/ADA Group09/BWM normalisation.jpg)
+
+# Bats men Selection
+
+![Bats men Selection](C:/Users/salon/OneDrive/Desktop/ADA Group09/Batsmen.jpeg)
+
+![Bowler Selection](C:/Users/salon/OneDrive/Desktop/ADA Group09/Bowler.jpeg)
+
+
+![All rounder Selection](C:/Users/salon/OneDrive/Desktop/ADA Group09/All rounder.jpeg)
+#Analysis
+
+![Analysis](C:/Users/salon/OneDrive/Desktop/ADA Group09/BMW Bat.jpg)
+
+![Analysis](C:/Users/salon/OneDrive/Desktop/ADA Group09/BWM Ball.jpg)
+
+![Analysis](C:/Users/salon/OneDrive/Desktop/ADA Group09/BWM All.jpg)
+```{r }
+
+dataframe3 <- dataframe1[dataframe1$team1 == "Chennai Super Kings", ]
+
+table1 <- table(dataframe3$winner, dataframe3$'toss_winner')
+prop.table(table1)
+
+dataframe4 <- dataframe1[dataframe1$team1 == "Delhi Daredevils", ]
+
+table2 <- table(dataframe4$winner, dataframe4$'toss_winner')
+prop.table(table2)
+
+dataframe5 <- dataframe1[dataframe1$team1 == "Deccan Chargers", ]
+
+table3 <- table(dataframe5$winner, dataframe5$'toss_winner')
+prop.table(table3)
+
+dataframe6 <- dataframe1[dataframe1$team1 == "Gujarat Lions", ]
+
+table4 <- table(dataframe6$winner, dataframe6$'toss_winner')
+prop.table(table4)
+
+dataframe7 <- dataframe1[dataframe1$team1 == "Kings XI Punjab", ]
+
+table5 <- table(dataframe7$winner, dataframe7$'toss_winner')
+prop.table(table5)
+
+dataframe8 <- dataframe1[dataframe1$team1 == "Kochi Tuskers Kerala", ]
+
+table6 <- table(dataframe8$winner, dataframe8$'toss_winner')
+prop.table(table6)
+
+dataframe9 <- dataframe1[dataframe1$team1 == "Delhi Capitals", ]
+
+table7 <- table(dataframe9$winner, dataframe9$'toss_winner')
+prop.table(table7)
+
+dataframe10 <- dataframe1[dataframe1$team1 == "Kolkata Knight Riders", ]
+
+table8 <- table(dataframe10$winner, dataframe10$'toss_winner')
+prop.table(table8)
+
+dataframe11 <- dataframe1[dataframe1$team1 == "Mumbai Indians", ]
+
+table9 <- table(dataframe11$winner, dataframe11$'toss_winner')
+prop.table(table9)
+
+dataframe12 <- dataframe1[dataframe1$team1 == "Pune Warriors", ]
+
+table10 <- table(dataframe12$winner, dataframe12$'toss_winner')
+prop.table(table10)
+
+dataframe13 <- dataframe1[dataframe1$team1 == "Rajasthan Royals", ]
+
+table11 <- table(dataframe13$winner, dataframe13$'toss_winner')
+prop.table(table11)
+
+dataframe14 <- dataframe1[dataframe1$team1 == "Rising Pune Supergiants", ]
+
+table12 <- table(dataframe14$winner, dataframe14$'toss_winner')
+prop.table(table12)
+
+dataframe15 <- dataframe1[dataframe1$team1 == "Royal Challengers Bangalore", ]
+
+table13 <- table(dataframe15$winner, dataframe15$'toss_winner')
+prop.table(table13)
+
+dataframe16 <- dataframe1[dataframe1$team1 == "Sunrisers Hyderabad", ]
+
+table14 <- table(dataframe16$winner, dataframe16$'toss_winner')
+prop.table(table14)
+```
+
+#Teamwise Toss Impact
+```{r}
+matches %>% 
+  group_by(winner) %>%
+  summarize(wins = n(),
+            toss_wins = sum(Toss_Match_win)) %>% mutate(impact_pct = (toss_wins/wins)*100) %>% 
+  ggplot(aes(x=impact_pct, y=winner, fill=winner)) + geom_col(position="dodge") + 
+  labs(x="% of Toss Impact", y="Team", title = "Impact of Tosses on teams") +
+  geom_text(aes(label=round(impact_pct)), vjust=1.6, color="black", size=4)
+```
+
+
+#Venue wise Toss winning impact
+```{r}
+matches %>% 
+  group_by(venue) %>%
+  summarize(matches_total = n(),
+            toss_wins = sum(Toss_Match_win)) %>% mutate(impact_pct = (toss_wins/matches_total)*100) %>% 
+  ggplot(aes(x=reorder(venue,impact_pct), y=venue)) + geom_col(position="dodge") + 
+  labs(x="% of Toss Impact", y="Team", title = "Impact of Tosses on venues") +
+  geom_text(aes(label=round(impact_pct)), vjust=1.6, color="black", size=4)  + coord_flip()
+
+
+matches %>% 
+  group_by(venue) %>%
+  summarize(matches_total = n())
+
+```
+
+
+#impact of toss decision on match
+```{r}
+matches %>% 
+  group_by(toss_decision) %>%
+  summarize(matches_total = n(),
+            toss_wins = sum(Toss_Match_win)) %>% mutate(impact_pct = (toss_wins/matches_total)*100) %>% 
+  ggplot(aes(x=impact_pct, y=toss_decision)) + geom_col(position="dodge") + 
+  labs(x="% of Toss Impact", y="Team", title = "Impact of Tosses on toss decisions") +
+  geom_text(aes(label=round(impact_pct)), vjust=1.6, color="black", size=4)
+
+```
+
+#Batsmen Selection
+
+
+```{r}
+
+dataframe1 %>% group_by(winner) %>%
+  filter(toss_winner != winner) %>%
+  summarise(cases = n())
+
+df=dataframe02 %>%
+  group_by(batsman)
+df
+head(dataframe02)
+
+
+bat1<-dataframe02 %>% 
+  group_by(batsman) %>%
+  summarize(Strike_rate = mean(batsman_runs)*100) 
+bat1
+bat2<-dataframe02 %>% 
+  group_by(batsman) %>%
+  summarize(Runs = sum(batsman_runs))
+bat2
+bat3<-dataframe02 %>% 
+  group_by(batsman) %>%
+  summarize(balls_faced = n())
+bat3
+bat = merge(x = bat1, y = bat2, by = "batsman")
+bat_final=merge(x = bat, y = bat3, by = "batsman")
+bat_final
+
+dataframe2 %>% group_by(batsman) %>% filter(length(total_runs)>300) %>% summarise(strike_rate= mean(batsman_runs)*100) %>% top_n(n=10,wt=strike_rate) %>%
+  ggplot(aes(reorder(batsman,-strike_rate),strike_rate,fill=batsman))+ geom_bar(stat="identity")+ xlab("Batsman") + ylab("Strike Rate") +
+  ggtitle("Batsmen with top strike rate",subtitle = "Minimum 300 balls faced")+
+  theme(axis.text.x = element_text(angle = 75, hjust = 1)) + guides(fill=F)
+```
+
+- Across IPL, V Kohli has scored the highest number of runs followed by S Raina and David Warner.  
+- It can be observed that batsmen from top 3 order dominate the list. AB de Villiers and MS Dhoni are the only middle order batsmen in the top 10 run getters list.
+
+- Having faced a minimum of 300 balls, AD Russell has the highest strike rate of around 175, followed by N Pooran and S Narine. Interestingly all the top 3 are West Indians
+
+- It can be observed that most of them are middle – order batsmen except V Sehwag and JC Butler who are openers
+
+
+#Bowler Selection
+``` {r}
+b1<-dataframe02 %>% 
+  group_by(bowler) %>%
+  filter(player_dismissed!="") %>% summarise(wickets= length(player_dismissed))
+b1
+
+b2<-dataframe02 %>% 
+  group_by(bowler) %>% filter(length(ball) > 300) %>% 
+  summarise(Economy= mean(total_runs)*6)
+b2
+b3<-dataframe02 %>% 
+  group_by(bowler) %>%
+  summarize(balls_bowled = n())
+bowl = merge(x = b1, y = b2, by = "bowler")
+bowl_final=merge(x=bowl, y=b3,by="bowler")
+bowl_final
+
+dataframe2 %>% 
+  group_by(bowler) %>% filter(length(ball) > 300) %>% 
+  summarise(Economy= mean(total_runs)*6, Wickets = length(which(player_dismissed!="")) ) %>% 
+  ggplot(aes(Wickets,Economy,label=bowler,alpha= Wickets/Economy)) +geom_text(color="black") + theme_minimal(base_family = "Ubuntu Condensed")+
+  theme(legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        plot.background = element_rect(fill = "#EFF2F4"),
+        axis.text = element_text(size = 15),
+        plot.title = element_text(size=16)) +
+  ggtitle("Economy  vs Wickets!",subtitle = "Min balls bowled : 300") + 
+  coord_cartesian(xlim = c(25, 200))
+```
+
+- Among Bowlers, SL Malinga has bagged the highest number of wickets followed by DJ Bravo and A Mishra. 
+
+- There is a balance between the pacers and spinners in the top 10 wicket takers.
+
+- Also, 7 out of 10 bowlers are Indians
+
+- Lowest economy rate is observed for spinners with Rashid Khan having the lowest.
+
+- Among bowlers with more than 150 wickets, R Ashwin has the lowest economy rate followed closely by SP Narine, Harbhajan Singh and SL Malinga
+
+- Interesting observation: DJ Bravo has high economy rate in spite of being in top 3 highest wicket takers which maybe due to him bowling in the death overs majority of times. 
+
+#All rounder Selection
+```{r}
+all_rounder=merge(x=bat_final,y=bowl_final,by.x='batsman', by.y='bowler')
+all_rounder
+all_rounder_1=all_rounder%>%filter(Runs>=500&wickets>=50)
+all_rounder_1
+
+#NO of wins
+dataframe1 %>% 
+  filter(result != 'No result') %>%
+  group_by(winner,city) %>%
+  summarize(wins = n(),.groups='drop') %>%
+  arrange(desc(wins)) %>%
+  top_n(10)
+```
+
+- Player should have played 300 balls
+
+- Player should have scored at least 500 runs
+
+- Players should have taken at least 50 wickets
+
+- Player should have played 300 balls
+
+- Player should have scored at least 500 runs
+
+- Players should have taken at least 50 wickets
+
+#Wicket Keeper Selection
+```{r}
+
+## Top 10 player of the match
+dataframe1 %>% 
+  group_by(player_of_match) %>%
+  summarize(awards = n()) %>% 
+  top_n(10) %>%
+  ggplot(aes(x = player_of_match, y=awards, fill=player_of_match)) + geom_col(position="dodge") +
+  labs(x="Player_of_match", y = "Awards" , title = "Top 10 Player Man of the Match") + coord_flip()
+
+dataframe1 %>% 
+  group_by(player_of_match) %>%
+  summarize(awards = n()) %>% 
+  top_n(10) %>%
+  ggplot(aes(x = reorder(player_of_match, -awards), y=awards, fill=player_of_match)) + geom_col(position="dodge") +
+  labs(x="Player_of_match", y = "Awards" , title = "Top 10 Player Man of the Match") + coord_flip()
+
+dataframe2 %>% 
+  group_by(fielder) %>% filter(dismissal_kind == 'stumped') %>% 
+  summarise(stumpings= n())%>%
+  top_n(10) %>%
+  ggplot(aes(x = reorder(fielder, -stumpings), y=stumpings, fill=fielder)) + geom_col(position="dodge") +
+  labs(x="fielder", y = "stumpings" , title = "Top 10 Stumpings") + coord_flip()
+
+```
+- Most of the stumpings in IPL have been done by MS Dhoni
+
+- MS Dhoni has most of the Man of the match player among wicket keeper batsman category 
+
+- MS Dhoni is also top 10 run-getter of all time
+
+## Captaincy Selection
+```{r}
+matches_won<-as.data.frame(table(dataframe1$winner))
+colnames(matches_won)[2]<-"Won"
+matches_played<-as.data.frame(table(dataframe1$team2) + table(dataframe1$team1))
+colnames(matches_played)[2]<-"Played"
+
+ggplot(left_join(matches_played,matches_won ),aes(reorder(Var1,-Won/Played),Won*100/Played,fill = Var1)) +geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ xlab("Team")+
+  ylab("Win Percentage") +  guides(fill=FALSE)+coord_cartesian(ylim = c(0, 100))
+```
+
+- Rising Pune Supergiants and Chennai Super Kings have the highest win percentage among all the teams. Both the teams have been captained by MS Dhoni. 
+- Also, he has led Chennai Super Kings to win the IPL title thrice and also captained Rising Pune Supergiant once in overall 2 years of  their IPL stint. 
+
+
+## Conclusion
+
+The dream TITANS are --> 
+
+$1$  Rohit Sharma 
+Role : Captain, Opening Batsman
+(3rd  Highest number of Player of the Match awards. Among top 5 run getters)
+
+
+$2$ Virat Kohli
+Role : Opening Batsman
+(Highest Run Getter)
+
+
+$3$ Suresh Raina
+Role : First Down Batsman
+(Second Highest Run Getter)
+
+
+$4$  Shikhar Dhawan
+
+Role : Second Down Batsman
+(Left-handed batsman, among top 10 Run getters)
+
+
+$5$  Robin Uthappa
+Role : Wicket Keeper
+(Finisher, Power hitter, wicket-keeper cum batsman)
+
+
+$6$ Sunil Naraine
+Role : All Rounder, Off Spinner
+(T20 specialist  Ability to control the run flow in middle bowlers)
+
+
+
+$7$ DJ Bravo
+Role : All Rounder, Medium Pace 
+(2nd Highest Wicket Taker with ability to bowl in the death overs)
+
+$8$ Andre Russel
+Role : All Rounder
+[Finisher(Highest strike rate), Power hitter]
+
+
+$9$ Lasith Malinga
+Role : Bowler, Pace
+(Highest Wicket Taker with decent economy rate)
+
+$10$ Amit Mishra
+Role : Bowler, Leg Spinner
+(3rd highest wicket taker )
+
+
+$11$ Piyush Chawla
+Role : Bowler, Leg Spinner
+(4th highest wicket taker )
+
+# Reference:
+
+- G D I Barr & B S Kantor (2004) A criterion for comparing and selecting
+batsmen in limited overs cricket, Journal of the Operational Research Society, 55:12, 1266-1274,
+DOI: 10.1057/palgrave.jors.2601800
+
+
